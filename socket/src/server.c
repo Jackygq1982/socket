@@ -71,12 +71,12 @@ void HandleClient(int sock,FILE *f)
 			//Die("Failed to receive additional bytes from client\n");  
 		}  
 		*/
+		fwrite(buffer,received,1,f);
+		fwrite("\n",sizeof(char),1,f);
+		fflush(f);
 		if (send(sock, buffer, received, 0) != received) {  
 			Die("Failed to send bytes to client\n");  
 		}  
-		fputs(buffer,f);
-		fputs("\n",f);
-		fflush(f);
 		if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {  
 			Die("Failed to receive additional bytes from client\n");  
 		}  

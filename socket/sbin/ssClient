@@ -1,0 +1,11 @@
+nohup socketClient 172.20.2.14 GQ 99882 &
+nohup socketClient 172.20.2.14 gg 99882 &
+nohup socketClient 172.20.2.14 qq 99882 &
+nohup socketClient 172.20.2.14 hh 99882 &
+nohup socketClient 172.20.2.14 hj 99882 &
+nohup socketClient 172.20.2.14 gc 99882 &
+nohup socketClient 172.20.2.14 gl 99882 &
+nohup socketClient 172.20.2.14 yy 99882 &
+nohup socketClient 172.20.2.14 xx 99882 &
+nohup socketClient 172.20.2.14 oo 99882 &
+nohup socketClient 172.20.2.14 ll 99882 &

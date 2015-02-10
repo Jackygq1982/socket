@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #define BUFFSIZE 32  
@@ -12,9 +13,6 @@ int main(int argc, char *argv[])
 {  
 	int sock;  
 	struct sockaddr_in echoserver;  
-	char buffer[BUFFSIZE];  
-	unsigned int echolen;  
-	int received = 0;  
 	if (argc != 4) {  
 		fprintf(stderr, "USAGE: TCP echo <server_ip> <word> <port>\n");  
 		exit(1);  
@@ -29,14 +27,30 @@ int main(int argc, char *argv[])
 	if (connect(sock, (struct sockaddr *) &echoserver, sizeof(echoserver)) < 0) {  
 		Die("Failed to connect with server\n");  
 	}  
-	echolen = strlen(argv[2]);  
-	if (send(sock, argv[2], echolen, 0) != echolen) {  
+	int i = 0;
+	for(i = 0 ; i < 10000 ; i ++) {
+		char msg[100];
+		memset(msg,0x00,sizeof(msg));
+		sprintf(msg,"%s%d",argv[2],i);
+		send_msg(sock,msg);
+		sleep(10);
+	}
+	close(sock);  
+
+	exit(0);  
+}  
+
+send_msg(int fd,char * msg) {
+	int received = 0;  
+	char buffer[BUFFSIZE];  
+	unsigned int echolen = strlen(msg);  
+	if (send(fd, msg, echolen, 0) != echolen) {  
 		Die("Mismatch in number of sent bytes\n");  
 	}  
 	fprintf(stdout, "Received: \n");  
 	while (received < echolen) {  
 		int bytes = 0;  
-		if ((bytes = recv(sock, buffer, BUFFSIZE-1, 0)) < 1) {  
+		if ((bytes = recv(fd, buffer, BUFFSIZE-1, 0)) < 1) {  
 			Die("Failed to receive bytes from server\n");  
 		}  
 		received += bytes;  
@@ -44,6 +58,4 @@ int main(int argc, char *argv[])
 	}  
 
 	fprintf(stdout, "\n");  
-	close(sock);  
-	exit(0);  
-}  
+}

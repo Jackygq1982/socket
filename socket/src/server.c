@@ -24,6 +24,7 @@ int main(int argc,char *argv[]) {
 		Die("Failed to listen on server socket\n");  
 	}  
 
+	FILE *f = fopen("./server.log","w");
 	while (1) {  
 		unsigned int clientlen = sizeof(echoclient);  
 		if ((clientsock = accept(serversock, &echoclient, &clientlen)) < 0 ) {  
@@ -31,11 +32,12 @@ int main(int argc,char *argv[]) {
 		}  
 		printf("Client connected sock:%d\n", clientsock);
 		//printf("Client connected:%s\n", inet_ntoa(echoclient.sin_addr));  
-		HandleClient(clientsock);  
+		HandleClient(clientsock,f);  
 	} 
+	fclose(f);
 }
 
-void HandleClient(int sock)  
+void HandleClient(int sock,FILE *f)  
 {  
 	char buffer[BUFFSIZE];  
 	int received = -1;  
@@ -44,7 +46,7 @@ void HandleClient(int sock)
 	}  
 
 	while (received > 0) {  
-
+		/*
 		buffer[received++] = ' ';
 		buffer[received++] = 'r';
 		buffer[received++] = 'e';
@@ -67,6 +69,16 @@ void HandleClient(int sock)
 		}  
 		if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {  
 			//Die("Failed to receive additional bytes from client\n");  
+		}  
+		*/
+		if (send(sock, buffer, received, 0) != received) {  
+			Die("Failed to send bytes to client\n");  
+		}  
+		fputs(buffer,f);
+		fputs("\n",f);
+		fflush(f);
+		if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {  
+			Die("Failed to receive additional bytes from client\n");  
 		}  
 	}  
 	close(sock);  

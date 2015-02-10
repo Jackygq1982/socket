@@ -1,7 +1,7 @@
 CC=gcc -g
 MV=mv
 RM=rm
-all:clean server clinet
+all:server clinet
 lib:
 server:lib
 	${CC} -o socketServer server.c

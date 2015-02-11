@@ -32,7 +32,14 @@ int main(int argc,char *argv[]) {
 		}  
 		printf("Client connected sock:%d\n", clientsock);
 		//printf("Client connected:%s\n", inet_ntoa(echoclient.sin_addr));  
-		HandleClient(clientsock,f);  
+		int pid = fork();
+		if(pid < 0) {
+			fprintf(stderr,"create child process error!");
+		} else if(pid == 0) {
+			HandleClient(clientsock,f);  
+		} else {
+			continue;
+		}
 	} 
 	fclose(f);
 }

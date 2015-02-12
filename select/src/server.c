@@ -1,59 +1,131 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#define MAXPENDING 5  
-#define BUFFSIZE 32  
+#include <errno.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/select.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <string.h>
+#define LISTENQ 5
+#define MAXLINE 1024
+#define IPADDRESS "127.0.0.1"
 int main(int argc,char *argv[]) {
-	int serversock, clientsock;  
-	struct sockaddr_in echoserver, echoclient;  
-	if (argc != 2) {  
-		fprintf(stderr, "USAGE: selectServer <port>\n");  
-		exit(1);  
+	if (argc <= 1) {
+                fprintf(stderr, "USAGE: selectServer <port>\n");
+                exit(1);
+        }
+	int listenfd,connfd,sockfd;
+	struct sockaddr_in chiaddr;
+	listenfd = socket_bind(IPADDRESS,atoi(argv[1]));
+	listen(listenfd,LISTENQ);
+	printf("server started for address [%s] and port [%s] \n",IPADDRESS,argv[1]);
+	do_select(listenfd);
+	return 0;
+}
+int socket_bind(char *ip,int port) {
+	int listenfd = 0;
+	struct sockaddr_in servaddr;
+	listenfd = socket(AF_INET,SOCK_STREAM,0);
+	if(listenfd == -1) {
+		perror("socket error!\n");
+		exit(1);
 	}
-	if ((serversock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {  
-		Die("Failed to create socket");  
-	} 
-	memset(&echoserver, 0, sizeof(echoserver));  
-	echoserver.sin_family = AF_INET;  
-	echoserver.sin_addr.s_addr = htonl(INADDR_ANY);  
-	echoserver.sin_port = htons(atoi(argv[1]));  
-	if (bind(serversock, (struct sockaddr *) &echoserver, sizeof(echoserver)) < 0) {  
-		Die("Failed to bind the server socket");  
-	}  
-	if (listen(serversock, MAXPENDING) < 0) {  
-		Die("Failed to listen on server socket");  
-	}  
+	bzero(&servaddr,sizeof(servaddr));
+	servaddr.sin_family=AF_INET;
+	inet_pton(AF_INET,ip,&servaddr.sin_addr);
+	servaddr.sin_port = htons(port);
+	if(bind(listenfd,(struct sockaddr*)&servaddr,sizeof(servaddr)) == -1) {
+		perror("bind error \n");
+		exit(1);
+	}
+	return listenfd;
+}
+void do_select(int listenfd) {
+	int connfd,sockfd;
+	struct sockaddr_in chiaddr;
+	socklen_t chiaddrlen;
+	fd_set rset,allset;
+	int maxfd,maxi;
+	int i;
+	int clientfds[FD_SETSIZE];
+	int nready;
+	
+	for(i = 0 ; i < FD_SETSIZE ; i ++) 
+		clientfds[i] = -1;
+	maxi = -1;
+	FD_ZERO(&allset);
+	FD_SET(listenfd,&allset);
+	maxfd = listenfd;
 
-	while (1) {  
-		unsigned int clientlen = sizeof(echoclient);  
-		if ((clientsock = accept(serversock, (struct sockaddr *) &echoclient, &clientlen)) < 0 ) {  
-			Die("Failed to accept client connection");  
-		}  
-		fprintf(stdout, "Client connected:%s/n", inet_ntoa(echoclient.sin_addr));  
-		HandleClient(clientsock);  
-	} 
+	for( ; ; ) {
+
+		rset = allset;
+		nready = select(maxfd+1,&rset,NULL,NULL,NULL);
+		if(nready == -1) {
+			perror("select error!\n");
+			exit(1);
+		}
+		if(FD_ISSET(listenfd,&rset)) {
+			chiaddrlen = sizeof(chiaddr);
+			if((connfd = accept(listenfd,(struct sockaddr*)&chiaddr , &chiaddrlen)) == -1) {
+				if(errno == EINTR)
+					continue;
+				else {
+					perror("accept error\n");
+					exit(1);
+				}
+			}
+			fprintf(stdout,"accept a new client : %s:%d\n",inet_ntoa(chiaddr.sin_addr),chiaddr.sin_port);
+			for(i = 0 ; i <FD_SETSIZE ; i++) {
+				if(clientfds[i] < 0) {
+					clientfds[i] = connfd;
+					break;
+				}
+
+			}
+
+			if( i == FD_SETSIZE) {
+				fprintf(stderr,"too many clients.\n");
+				exit(1);
+			}
+			FD_SET(connfd,&allset);
+			maxfd = (connfd > maxfd ? connfd : maxfd);
+			maxi = (i > maxi ? i : maxi);
+			if(--nready <= 0)
+				continue;
+		}
+
+		handle_connection(clientfds,maxi,&rset,&allset);
+
+	}
+
 }
 
-void HandleClient(int sock)  
-{  
-	char buffer[BUFFSIZE];  
-	int received = -1;  
-	if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {  
-		Die("Failed to recevie inital bytes from client");  
-	}  
-	while (received > 0) {  
-		if (send(sock, buffer, received, 0) != received) {  
-			Die("Failed to send bytes to client");  
-		}  
-		if ((received = recv(sock, buffer, BUFFSIZE, 0)) < 0) {  
-			Die("Failed to receive additional bytes from client");  
-		}  
-	}  
-	close(sock);  
-}
+void handle_connection(int *connfds,int num,fd_set *prest,fd_set *pallset) {
+	int i,n;
+	char buf[MAXLINE];
+	memset(buf,0,MAXLINE);
+	for(i = 0 ; i <= num ; i ++) {
 
-void Die(char *mess)  
-{  
-	fprintf(stderr,mess);  
-	exit(1);  
+		if(connfds[i] < 0) 
+			continue;
+		if(FD_ISSET(connfds[i],prest)) {
+			n = read(connfds[i],buf,MAXLINE);
+			if(n == 0) {
+				close(connfds[i]);
+				FD_CLR(connfds[i],pallset);
+				connfds[i] = -1;
+				continue;
+			}
+			printf("read msg is : ");
+			write(STDOUT_FILENO,buf,n);
+			write(connfds[i],buf,n);
+
+		}
+
+
+	}
+
 }

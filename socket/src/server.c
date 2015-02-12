@@ -20,6 +20,7 @@ int main(int argc,char *argv[]) {
 	if (bind(serversock, (struct sockaddr *) &echoserver, sizeof(echoserver)) < 0) {  
 		Die("Failed to bind the server socket\n");  
 	}  
+	printf("server bind to port [%d] succ!\n",atoi(argv[1]));
 	if (listen(serversock, MAXPENDING) < 0) {  
 		Die("Failed to listen on server socket\n");  
 	}  

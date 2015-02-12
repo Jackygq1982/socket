@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #define MAXPENDING 5  
@@ -32,7 +33,7 @@ int main(int argc,char *argv[]) {
 			Die("Failed to accept client connection\n");  
 		}  
 		printf("Client connected sock:%d\n", clientsock);
-		//printf("Client connected:%s\n", inet_ntoa(echoclient.sin_addr));  
+		printf("Client connected:%s\n", inet_ntoa(echoclient.sin_addr));  
 		int pid = fork();
 		if(pid < 0) {
 			fprintf(stderr,"create child process error!");

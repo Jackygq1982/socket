@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <errno.h>
@@ -20,7 +21,7 @@ int main(int argc,char *argv[]) {
 	struct sockaddr_in chiaddr;
 	listenfd = socket_bind(IPADDRESS,atoi(argv[1]));
 	listen(listenfd,LISTENQ);
-	printf("server started for address [%s] and port [%s] \n",IPADDRESS,argv[1]);
+	fprintf(stdout,"server started for address [%s] and port [%s] \n",IPADDRESS,argv[1]);
 	do_select(listenfd);
 	return 0;
 }
@@ -51,7 +52,8 @@ void do_select(int listenfd) {
 	int i;
 	int clientfds[FD_SETSIZE];
 	int nready;
-	
+	char ipaddress[15];
+	memcpy(ipaddress,inet_ntoa(chiaddr.sin_addr),strlen(inet_ntoa(chiaddr.sin_addr)));
 	for(i = 0 ; i < FD_SETSIZE ; i ++) 
 		clientfds[i] = -1;
 	maxi = -1;
@@ -77,7 +79,7 @@ void do_select(int listenfd) {
 					exit(1);
 				}
 			}
-			fprintf(stdout,"accept a new client : %s:%d\n",inet_ntoa(chiaddr.sin_addr),chiaddr.sin_port);
+			fprintf(stdout,"accept a new client : %s:%d\n",ipaddress,chiaddr.sin_port);
 			for(i = 0 ; i <FD_SETSIZE ; i++) {
 				if(clientfds[i] < 0) {
 					clientfds[i] = connfd;
@@ -119,8 +121,8 @@ void handle_connection(int *connfds,int num,fd_set *prest,fd_set *pallset) {
 				connfds[i] = -1;
 				continue;
 			}
-			printf("read msg is : ");
 			write(STDOUT_FILENO,buf,n);
+			fprintf(stdout,"\n");
 			write(connfds[i],buf,n);
 
 		}

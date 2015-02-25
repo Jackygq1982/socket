@@ -13,6 +13,8 @@
 #define MAXLINE 1024
 #define IPADDRESS "127.0.0.1"
 int main(int argc,char *argv[]) {
+	fd_set tmp;
+	printf("fd_set size = %d\n",sizeof(tmp));
 	if (argc <= 1) {
                 fprintf(stderr, "USAGE: selectServer <port>\n");
                 exit(1);
@@ -65,6 +67,7 @@ void do_select(int listenfd) {
 
 		rset = allset;
 		nready = select(maxfd+1,&rset,NULL,NULL,NULL);
+		printf("select invoke ! ");
 		if(nready == -1) {
 			perror("select error!\n");
 			exit(1);
